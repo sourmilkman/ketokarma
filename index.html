@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#1f7a58">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Keto Calc">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Keto Macro Calculator</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #14211b;
+        --muted: #62716b;
+        --line: #d8e3df;
+        --surface: #ffffff;
+        --wash: #f4f8f6;
+        --green: #1f7a58;
+        --green-2: #35a875;
+        --teal: #45a79b;
+        --coral: #e96570;
+        --yellow: #edbd3f;
+        --amber: #d28a20;
+        --blue: #2f83d1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(160deg, rgba(53, 168, 117, 0.18), transparent 34%),
+          linear-gradient(25deg, rgba(233, 101, 112, 0.13), transparent 32%),
+          var(--wash);
+        color: var(--ink);
+        font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        line-height: 1.35;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      .app {
+        width: min(100%, 620px);
+        margin: 0 auto;
+        padding: max(18px, env(safe-area-inset-top)) 14px max(22px, env(safe-area-inset-bottom));
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: 1.45rem;
+        letter-spacing: 0;
+      }
+
+      .card {
+        border: 1px solid rgba(20, 33, 27, 0.08);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: 0 18px 42px rgba(20, 33, 27, 0.12);
+      }
+
+      .results {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        margin-bottom: 12px;
+        padding: 14px;
+      }
+
+      .total {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .total span {
+        color: var(--muted);
+        font-size: 0.88rem;
+        font-weight: 800;
+      }
+
+      .total strong {
+        font-size: 2rem;
+        line-height: 1;
+      }
+
+      .macro-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .macro {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        padding: 10px 8px;
+      }
+
+      .macro span {
+        display: block;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 900;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .macro strong {
+        display: flex;
+        align-items: baseline;
+        gap: 3px;
+        margin-top: 5px;
+        font-size: 1.4rem;
+        line-height: 1;
+      }
+
+      .macro small,
+      .total small {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 900;
+      }
+
+      .protein {
+        border-top: 4px solid var(--yellow);
+      }
+
+      .fat {
+        border-top: 4px solid var(--teal);
+      }
+
+      .carbs {
+        border-top: 4px solid var(--coral);
+      }
+
+      form.card {
+        padding: 14px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      label,
+      fieldset {
+        min-width: 0;
+      }
+
+      .field,
+      fieldset {
+        display: grid;
+        gap: 7px;
+        margin: 0;
+        border: 0;
+        padding: 0;
+      }
+
+      .field > span,
+      legend,
+      .range-head label {
+        color: #33433d;
+        font-size: 0.84rem;
+        font-weight: 900;
+      }
+
+      input[type="number"],
+      select {
+        width: 100%;
+        min-height: 48px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: white;
+        color: var(--ink);
+        padding: 10px 12px;
+        outline: 0;
+      }
+
+      select {
+        appearance: none;
+        background-image:
+          linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+          linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+        background-position:
+          calc(100% - 18px) 20px,
+          calc(100% - 13px) 20px;
+        background-repeat: no-repeat;
+        background-size: 5px 5px, 5px 5px;
+        padding-right: 36px;
+      }
+
+      input[type="number"]:focus,
+      select:focus,
+      .segments input:focus-visible + span,
+      button:focus-visible {
+        border-color: var(--green-2);
+        box-shadow: 0 0 0 4px rgba(53, 168, 117, 0.18);
+      }
+
+      .wide {
+        grid-column: 1 / -1;
+      }
+
+      .split {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .segments {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .segments label {
+        position: relative;
+      }
+
+      .segments input {
+        position: absolute;
+        opacity: 0;
+      }
+
+      .segments span {
+        display: grid;
+        min-height: 48px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: #31423b;
+        font-weight: 900;
+      }
+
+      .segments input:checked + span {
+        border-color: var(--green);
+        background: rgba(31, 122, 88, 0.12);
+        color: var(--green);
+      }
+
+      .range-box {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfc;
+        padding: 12px;
+      }
+
+      .range-head,
+      .range-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      output {
+        color: var(--ink);
+        font-size: 1.45rem;
+        font-weight: 950;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        margin: 14px 0 8px;
+        accent-color: var(--green);
+      }
+
+      .range-foot {
+        color: var(--muted);
+        font-size: 0.76rem;
+        font-weight: 800;
+      }
+
+      #deficit-description {
+        text-align: center;
+      }
+
+      .chart-card {
+        margin-top: 12px;
+        padding: 14px;
+      }
+
+      .chart-layout {
+        display: grid;
+        grid-template-columns: 148px 1fr;
+        gap: 14px;
+        align-items: center;
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .hole {
+        fill: #fff;
+        stroke: #eef3f1;
+        stroke-width: 7;
+      }
+
+      .ring {
+        fill: transparent;
+        stroke-width: 7;
+        transform: rotate(-90deg);
+        transform-origin: center;
+      }
+
+      .protein-ring {
+        stroke: var(--yellow);
+      }
+
+      .fat-ring {
+        stroke: var(--teal);
+      }
+
+      .carbs-ring {
+        stroke: var(--coral);
+      }
+
+      .center-number {
+        fill: var(--ink);
+        font-size: 0.29rem;
+        font-weight: 950;
+      }
+
+      .center-label {
+        fill: var(--muted);
+        font-size: 0.16rem;
+        font-weight: 900;
+      }
+
+      dl {
+        display: grid;
+        gap: 8px;
+        margin: 0;
+      }
+
+      dl div {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      dt {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        color: #33433d;
+        font-size: 0.86rem;
+        font-weight: 900;
+      }
+
+      dd {
+        margin: 0;
+        font-size: 0.86rem;
+        font-weight: 950;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+
+      .protein-dot {
+        background: var(--yellow);
+      }
+
+      .fat-dot {
+        background: var(--teal);
+      }
+
+      .carbs-dot {
+        background: var(--coral);
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        min-height: 48px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--ink);
+        font-weight: 950;
+      }
+
+      .primary {
+        border-color: var(--green);
+        background: var(--green);
+        color: #fff;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 390px) {
+        .app {
+          padding-inline: 10px;
+        }
+
+        h1 {
+          font-size: 1.22rem;
+        }
+
+        .macro strong {
+          font-size: 1.22rem;
+        }
+
+        .chart-layout {
+          grid-template-columns: 126px 1fr;
+        }
+      }
+
+      @media (min-width: 720px) {
+        .app {
+          padding-top: 28px;
+        }
+
+        .results {
+          top: 12px;
+        }
+      }
+
+      @media print {
+        body {
+          background: white;
+        }
+
+        form,
+        header,
+        .actions {
+          display: none;
+        }
+
+        .app {
+          width: 100%;
+          padding: 0;
+        }
+
+        .card {
+          box-shadow: none;
+        }
+
+        .results {
+          position: static;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <h1>Keto Macro Calculator</h1>
+      </header>
+
+      <section class="card results" aria-live="polite" aria-label="Daily macro results">
+        <div class="total">
+          <span>Total Calories</span>
+          <strong><span id="calories-result">0</span> <small>k/cal</small></strong>
+        </div>
+        <div class="macro-grid">
+          <div class="macro protein">
+            <span>Protein</span>
+            <strong><span id="protein-result">0</span><small>g</small></strong>
+          </div>
+          <div class="macro fat">
+            <span>Fat</span>
+            <strong><span id="fat-result">0</span><small>g</small></strong>
+          </div>
+          <div class="macro carbs">
+            <span>Carbs</span>
+            <strong><span id="carbs-result">0</span><small>g</small></strong>
+          </div>
+        </div>
+      </section>
+
+      <form class="card" id="calculator-form">
+        <div class="field-grid">
+          <label class="field">
+            <span>Age</span>
+            <input id="age" type="number" min="13" max="120" step="1" inputmode="numeric" placeholder="35">
+          </label>
+
+          <fieldset>
+            <legend>Sex</legend>
+            <div class="segments" role="radiogroup" aria-label="Sex">
+              <label>
+                <input type="radio" name="gender" value="male">
+                <span>Male</span>
+              </label>
+              <label>
+                <input type="radio" name="gender" value="female">
+                <span>Female</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <span>Height</span>
+            <div class="split">
+              <label>
+                <span class="sr-only">Feet</span>
+                <input id="feet" type="number" min="1" max="8" step="1" inputmode="numeric" placeholder="Feet">
+              </label>
+              <label>
+                <span class="sr-only">Inches</span>
+                <input id="inches" type="number" min="0" max="11" step="1" inputmode="numeric" placeholder="In">
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <span>Weight</span>
+            <div class="split">
+              <label>
+                <span class="sr-only">Stones</span>
+                <input id="stones" type="number" min="0" max="50" step="1" inputmode="numeric" placeholder="Stones">
+              </label>
+              <label>
+                <span class="sr-only">Pounds</span>
+                <input id="pounds" type="number" min="0" max="13.99" step="0.01" inputmode="decimal" placeholder="Lb">
+              </label>
+            </div>
+          </div>
+
+          <label class="field wide">
+            <span>Activity Level</span>
+            <select id="activity-level">
+              <option value="1.1">Sedentary: little or no exercise</option>
+              <option value="1.17">Lightly active: 1 to 3 days weekly</option>
+              <option value="1.2">Moderately active: 3 to 5 days weekly</option>
+              <option value="1.24">Very active: hard exercise 3 to 5 days weekly</option>
+              <option value="1.34">Athlete: daily hard training or physical work</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="range-box">
+          <div class="range-head">
+            <label for="reduction">Caloric <span id="deficit-kind">Reduction</span></label>
+            <output id="reduction-value" for="reduction">-20%</output>
+          </div>
+          <input id="reduction" type="range" min="-30" max="10" step="1" value="-20">
+          <div class="range-foot">
+            <span>-30%</span>
+            <strong id="deficit-description">Optimal for weight loss</strong>
+            <span>+10%</span>
+          </div>
+        </div>
+      </form>
+
+      <section class="card chart-card" aria-label="Macro percentage breakdown">
+        <div class="chart-layout">
+          <svg viewBox="0 0 42 42" role="img" aria-labelledby="chart-title chart-desc">
+            <title id="chart-title">Macro percentage breakdown</title>
+            <desc id="chart-desc">Protein, fat, and carbohydrates as a percent of calories.</desc>
+            <circle class="hole" cx="21" cy="21" r="15.9155"></circle>
+            <circle id="protein-slice" class="ring protein-ring" cx="21" cy="21" r="15.9155"></circle>
+            <circle id="fat-slice" class="ring fat-ring" cx="21" cy="21" r="15.9155"></circle>
+            <circle id="carbs-slice" class="ring carbs-ring" cx="21" cy="21" r="15.9155"></circle>
+            <text x="21" y="20" text-anchor="middle" class="center-number" id="fat-center">0%</text>
+            <text x="21" y="25" text-anchor="middle" class="center-label">fat</text>
+          </svg>
+
+          <dl>
+            <div>
+              <dt><span class="dot protein-dot"></span>Protein</dt>
+              <dd id="protein-percent">0.00%</dd>
+            </div>
+            <div>
+              <dt><span class="dot fat-dot"></span>Fat</dt>
+              <dd id="fat-percent">0.00%</dd>
+            </div>
+            <div>
+              <dt><span class="dot carbs-dot"></span>Carbs</dt>
+              <dd id="carbs-percent">0.00%</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="reset-button">Reset</button>
+          <button class="primary" type="button" id="print-button">Print</button>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      (function () {
+        const proteinActivityMultipliers = {
+          1.1: 0.7,
+          1.17: 0.8,
+          1.2: 0.9,
+          1.24: 1,
+          1.34: 1.1
+        };
+
+        const form = document.querySelector("#calculator-form");
+        const poundsInput = document.querySelector("#pounds");
+        const reductionInput = document.querySelector("#reduction");
+        const reductionValue = document.querySelector("#reduction-value");
+        const deficitKind = document.querySelector("#deficit-kind");
+        const deficitDescription = document.querySelector("#deficit-description");
+
+        const out = {
+          protein: document.querySelector("#protein-result"),
+          fat: document.querySelector("#fat-result"),
+          carbs: document.querySelector("#carbs-result"),
+          calories: document.querySelector("#calories-result"),
+          proteinPercent: document.querySelector("#protein-percent"),
+          fatPercent: document.querySelector("#fat-percent"),
+          carbsPercent: document.querySelector("#carbs-percent"),
+          fatCenter: document.querySelector("#fat-center")
+        };
+
+        const slices = {
+          protein: document.querySelector("#protein-slice"),
+          fat: document.querySelector("#fat-slice"),
+          carbs: document.querySelector("#carbs-slice")
+        };
+
+        function roundDownRounded(value) {
+          return Math.floor(Math.round(value));
+        }
+
+        function poundsToKilograms(pounds) {
+          return roundDownRounded(0.45 * pounds);
+        }
+
+        function kilogramsToPounds(kilograms) {
+          return roundDownRounded(2.2 * kilograms);
+        }
+
+        function inchesToCentimeters(inches) {
+          return roundDownRounded(2.54 * inches);
+        }
+
+        function proteinCalories(grams) {
+          return Math.floor(4 * grams);
+        }
+
+        function removePercent(value, percent) {
+          return value - value / 100 * percent;
+        }
+
+        function percentOf(part, total) {
+          return total ? (part / total * 100).toFixed(2) : "0.00";
+        }
+
+        function numberValue(id) {
+          const value = document.querySelector("#" + id).value;
+          return value === "" ? null : Number(value);
+        }
+
+        function selectedValue(name) {
+          const checked = document.querySelector("input[name='" + name + "']:checked");
+          return checked ? checked.value : null;
+        }
+
+        function heightCm() {
+          const feet = numberValue("feet");
+          const inches = numberValue("inches");
+          return feet && inches !== null ? inchesToCentimeters(12 * feet + inches) : undefined;
+        }
+
+        function weightPounds() {
+          const stones = numberValue("stones");
+          const pounds = numberValue("pounds");
+          if (stones === null && pounds === null) {
+            return null;
+          }
+
+          return (stones || 0) * 14 + (pounds || 0);
+        }
+
+        function leanBodyMass({ gender, weight, height }) {
+          const weightKg = poundsToKilograms(weight);
+          const base = gender === "male" ? 1.1 : 1.07;
+          const divisor = gender === "male" ? 128 : 148;
+          return Math.floor(base * weightKg - weightKg / height * divisor * (weightKg / height));
+        }
+
+        function bmr({ age, gender, weight, height, reduction }) {
+          const weightKg = poundsToKilograms(weight);
+          let value = gender === "male"
+            ? 10 * weightKg + 6.25 * height - 5 * age + 5
+            : 10 * weightKg + 6.25 * height - 5 * age - 161;
+          const adjustment = Math.abs(reduction);
+          value = reduction <= 0
+            ? value - value / 100 * adjustment
+            : value + value / 100 * adjustment;
+          return roundDownRounded(value);
+        }
+
+        function state() {
+          return {
+            age: numberValue("age"),
+            gender: selectedValue("gender"),
+            weight: weightPounds(),
+            activityLevel: Number(document.querySelector("#activity-level").value),
+            reduction: Number(reductionInput.value)
+          };
+        }
+
+        function calculate(current) {
+          const height = heightCm();
+          if (!current.age || !current.gender || !current.weight || !height) {
+            return null;
+          }
+
+          const dailyBmr = bmr({ ...current, height });
+          const tdee = roundDownRounded(dailyBmr * current.activityLevel) || 0;
+          const lbm = leanBodyMass({ ...current, height });
+          const protein = Math.floor(
+            Math.round(kilogramsToPounds(lbm) * proteinActivityMultipliers[current.activityLevel])
+          ) || 0;
+          const afterProtein = tdee - proteinCalories(protein);
+          const fat = Math.floor(Math.floor(afterProtein - removePercent(afterProtein, 93)) / 9) || 0;
+          const carbs = Math.floor(Math.floor(afterProtein - removePercent(afterProtein, 7)) / 4) || 0;
+
+          return {
+            protein,
+            fat,
+            carbs,
+            tdee,
+            percentages: {
+              protein: percentOf(proteinCalories(protein), tdee),
+              fat: percentOf(Math.floor(9 * fat), tdee),
+              carbs: percentOf(Math.floor(4 * carbs), tdee)
+            }
+          };
+        }
+
+        function setSlice(slice, percent, offset) {
+          const amount = Math.max(0, Number(percent));
+          slice.style.strokeDasharray = amount + " " + (100 - amount);
+          slice.style.strokeDashoffset = String(-offset);
+        }
+
+        function chart(percentages) {
+          const protein = Number(percentages.protein);
+          const fat = Number(percentages.fat);
+          const carbs = Number(percentages.carbs);
+          setSlice(slices.protein, protein, 0);
+          setSlice(slices.fat, fat, protein);
+          setSlice(slices.carbs, carbs, protein + fat);
+        }
+
+        function reductionLabel(reduction) {
+          reductionValue.textContent = reduction + "%";
+          deficitKind.textContent = reduction <= 0 ? "Reduction" : "Surplus";
+
+          let text = "";
+          let color = "";
+          if (reduction <= -25) {
+            text = "Major Deficit";
+            color = "var(--coral)";
+          } else if (reduction <= -20) {
+            text = "Optimal for weight loss";
+            color = "var(--green)";
+          } else if (reduction <= -15) {
+            text = "Moderate Deficit";
+            color = "var(--amber)";
+          } else if (reduction <= -10) {
+            text = "Minor Deficit";
+            color = "var(--blue)";
+          }
+
+          deficitDescription.textContent = text;
+          deficitDescription.style.color = color;
+        }
+
+        function renderBlank() {
+          out.protein.textContent = "0";
+          out.fat.textContent = "0";
+          out.carbs.textContent = "0";
+          out.calories.textContent = "0";
+          out.proteinPercent.textContent = "0.00%";
+          out.fatPercent.textContent = "0.00%";
+          out.carbsPercent.textContent = "0.00%";
+          out.fatCenter.textContent = "0%";
+          chart({ protein: 0, fat: 0, carbs: 0 });
+        }
+
+        function render() {
+          const current = state();
+          reductionLabel(current.reduction);
+
+          const result = calculate(current);
+          if (!result) {
+            renderBlank();
+            return;
+          }
+
+          out.protein.textContent = result.protein;
+          out.fat.textContent = result.fat;
+          out.carbs.textContent = result.carbs;
+          out.calories.textContent = result.tdee;
+          out.proteinPercent.textContent = result.percentages.protein + "%";
+          out.fatPercent.textContent = result.percentages.fat + "%";
+          out.carbsPercent.textContent = result.percentages.carbs + "%";
+          out.fatCenter.textContent = Math.round(Number(result.percentages.fat)) + "%";
+          chart(result.percentages);
+        }
+
+        function reset() {
+          form.reset();
+          reductionInput.value = "-20";
+          render();
+        }
+
+        function formatPounds() {
+          if (poundsInput.value === "") {
+            return;
+          }
+
+          poundsInput.value = Number(poundsInput.value).toFixed(2);
+          render();
+        }
+
+        form.addEventListener("input", render);
+        form.addEventListener("change", render);
+        poundsInput.addEventListener("blur", formatPounds);
+        document.querySelector("#reset-button").addEventListener("click", reset);
+        document.querySelector("#print-button").addEventListener("click", () => window.print());
+
+        render();
+      }());
+    </script>
+    <script>
+      if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("./sw.js");
+        });
+      }
+    </script>
+  </body>
+</html>
