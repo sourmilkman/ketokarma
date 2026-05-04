@@ -410,7 +410,7 @@
 
       .actions {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(3, 1fr);
         gap: 10px;
         margin-top: 12px;
       }
@@ -629,6 +629,7 @@
         </div>
 
         <div class="actions">
+          <button type="button" id="install-button">Install</button>
           <button type="button" id="reset-button">Reset</button>
           <button class="primary" type="button" id="print-button">Print</button>
         </div>
@@ -637,6 +638,7 @@
 
     <script>
       (function () {
+        const STORAGE_KEY = "ketoMacroCalculatorVitals:v1";
         const proteinActivityMultipliers = {
           1.1: 0.7,
           1.17: 0.8,
@@ -647,6 +649,7 @@
 
         const form = document.querySelector("#calculator-form");
         const poundsInput = document.querySelector("#pounds");
+        const installButton = document.querySelector("#install-button");
         const reductionInput = document.querySelector("#reduction");
         const reductionValue = document.querySelector("#reduction-value");
         const deficitKind = document.querySelector("#deficit-kind");
@@ -668,6 +671,7 @@
           fat: document.querySelector("#fat-slice"),
           carbs: document.querySelector("#carbs-slice")
         };
+        let deferredInstallPrompt = null;
 
         function roundDownRounded(value) {
           return Math.floor(Math.round(value));
@@ -700,6 +704,14 @@
         function numberValue(id) {
           const value = document.querySelector("#" + id).value;
           return value === "" ? null : Number(value);
+        }
+
+        function setValue(id, value) {
+          if (value === undefined || value === null) {
+            return;
+          }
+
+          document.querySelector("#" + id).value = value;
         }
 
         function selectedValue(name) {
@@ -750,6 +762,65 @@
             activityLevel: Number(document.querySelector("#activity-level").value),
             reduction: Number(reductionInput.value)
           };
+        }
+
+        function savedInputs() {
+          return {
+            age: document.querySelector("#age").value,
+            gender: selectedValue("gender"),
+            feet: document.querySelector("#feet").value,
+            inches: document.querySelector("#inches").value,
+            stones: document.querySelector("#stones").value,
+            pounds: document.querySelector("#pounds").value,
+            activityLevel: document.querySelector("#activity-level").value,
+            reduction: reductionInput.value
+          };
+        }
+
+        function saveInputs() {
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(savedInputs()));
+          } catch (error) {
+            return;
+          }
+        }
+
+        function loadInputs() {
+          let raw = null;
+          try {
+            raw = localStorage.getItem(STORAGE_KEY);
+          } catch (error) {
+            return;
+          }
+
+          if (!raw) {
+            return;
+          }
+
+          try {
+            const saved = JSON.parse(raw);
+            setValue("age", saved.age);
+            setValue("feet", saved.feet);
+            setValue("inches", saved.inches);
+            setValue("stones", saved.stones);
+            setValue("pounds", saved.pounds);
+            setValue("activity-level", saved.activityLevel);
+            if (saved.reduction !== undefined) {
+              reductionInput.value = saved.reduction;
+            }
+            if (saved.gender) {
+              const genderInput = document.querySelector("input[name='gender'][value='" + saved.gender + "']");
+              if (genderInput) {
+                genderInput.checked = true;
+              }
+            }
+          } catch (error) {
+            try {
+              localStorage.removeItem(STORAGE_KEY);
+            } catch (storageError) {
+              return;
+            }
+          }
         }
 
         function calculate(current) {
@@ -855,6 +926,11 @@
 
         function reset() {
           form.reset();
+          try {
+            localStorage.removeItem(STORAGE_KEY);
+          } catch (error) {
+            // Storage can be unavailable in restricted browsing modes.
+          }
           reductionInput.value = "-20";
           render();
         }
@@ -865,15 +941,62 @@
           }
 
           poundsInput.value = Number(poundsInput.value).toFixed(2);
+          saveInputs();
           render();
         }
 
-        form.addEventListener("input", render);
-        form.addEventListener("change", render);
+        function renderAndSave() {
+          render();
+          saveInputs();
+        }
+
+        function isStandalone() {
+          return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+        }
+
+        function updateInstallButton() {
+          if (isStandalone()) {
+            installButton.textContent = "Installed";
+            installButton.disabled = true;
+            return;
+          }
+
+          installButton.textContent = "Install";
+          installButton.disabled = false;
+        }
+
+        async function installApp() {
+          if (deferredInstallPrompt) {
+            deferredInstallPrompt.prompt();
+            await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            updateInstallButton();
+            return;
+          }
+
+          window.alert("Use your browser menu and choose Add to Home Screen or Install app.");
+        }
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+          event.preventDefault();
+          deferredInstallPrompt = event;
+          updateInstallButton();
+        });
+
+        window.addEventListener("appinstalled", () => {
+          deferredInstallPrompt = null;
+          updateInstallButton();
+        });
+
+        form.addEventListener("input", renderAndSave);
+        form.addEventListener("change", renderAndSave);
         poundsInput.addEventListener("blur", formatPounds);
+        installButton.addEventListener("click", installApp);
         document.querySelector("#reset-button").addEventListener("click", reset);
         document.querySelector("#print-button").addEventListener("click", () => window.print());
 
+        loadInputs();
+        updateInstallButton();
         render();
       }());
     </script>
